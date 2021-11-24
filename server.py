@@ -19,8 +19,20 @@ def shutdown():
     conn.send("Trying to shutdown server".encode("utf-8"))
     os.system("shutdown -p")
 def typing(text):
-    time.sleep(1.0)
+    time.sleep(0.2)
     keyboard.write(text)
+    conn.send("Success".encode("utf-8"))
+def switchWindow():
+    keyboard.press("alt")
+    keyboard.press("tab")
+    keyboard.release("alt")
+    keyboard.release("tab")
+    conn.send("Success".encode("utf-8"))
+def closeWindow():
+    keyboard.press("alt")
+    keyboard.press("f4")
+    keyboard.release("alt")
+    keyboard.release("f4")
     conn.send("Success".encode("utf-8"))
 
 sock = socket.socket()
@@ -42,6 +54,10 @@ while True:
             clickRight()
         elif data == "shutdown" or data == "sd" or data == "shd":
             shutdown()
+        elif data == "switch" or data == "alttab" or data == "altab":
+            switchWindow()
+        elif data == "close" or data == "closeWindow" or data == "clWin":
+            closeWindow()
         elif "type" in data:
             spisok = data.split("=")
             typing(spisok[1])
