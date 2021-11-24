@@ -9,9 +9,12 @@ def me():
 
 def clickLeft():
     mouse.click("left")
+    conn.send("Sucess".encode("utf-8"))
 def clickRight():
     mouse.click("right")
+    conn.send("Sucess".encode("utf-8"))
 def shutdown():
+    conn.send("Trying to shutdown server".encode("utf-8"))
     os.system("shutdown -p")
 sock = socket.socket()
 sock.bind(("", 2345))
@@ -30,4 +33,6 @@ while True:
         clickRight()
     elif data == "shutdown" or data == "sd" or data == "shd":
         shutdown()
+    else:
+        conn.send("Error 1: Unknown command".encode("utf-8"))
 sock.close()
