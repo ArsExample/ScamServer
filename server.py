@@ -1,142 +1,183 @@
 import socket
-import subprocess
-import mouse
-import os
-import keyboard
 import time
-import plyer
+import threading
+import random
+import os
 
-def me():
-    returned_output = str(subprocess.check_output("whoami"))[2:-1]
-    conn.send(returned_output.encode("utf-8"))
-def clickLeft():
-    mouse.click("left")
-    conn.send("Successfully clicked left button".encode("utf-8"))
-def clickRight():
-    mouse.click("right")
-    conn.send("Successfully clicked right button".encode("utf-8"))
-def shutdown():
-    conn.send("Trying to shutdown server...".encode("utf-8"))
-    os.system("shutdown -p")
-def typing(text):
-    time.sleep(0.2)
-    keyboard.write(text)
-    conn.send("Successfully typed your text".encode("utf-8"))
-def switchWindow():
-    keyboard.press("alt")
-    keyboard.press("tab")
-    keyboard.release("alt")
-    keyboard.release("tab")
-    conn.send("Successfully switched window".encode("utf-8"))
-def closeWindow():
-    keyboard.press("alt")
-    keyboard.press("f4")
-    keyboard.release("alt")
-    keyboard.release("f4")
-    conn.send("Successfully closed window".encode("utf-8"))
-def hideWindows():
-    keyboard.press("win")
-    keyboard.press("d")
-    keyboard.release("win")
-    keyboard.release("d")
-    conn.send("Successfully hid all windows".encode("utf-8"))
-def changeLanguage():
-    keyboard.press("shift")
-    keyboard.press("alt")
-    keyboard.release("shift")
-    keyboard.release("alt")
-    conn.send("Successfully changed language".encode("utf-8"))
-def Mystify():
-    conn.send("Starting Mystify".encode("utf-8"))
-    os.system("Mystify.scr -a")
-    conn.send("Successfully Mystified".encode("utf-8"))
-def watchingYou():
-    os.system("start cmd")
-    time.sleep(0.1)
-    keyboard.write("I am watching you...", 0.1)
-    time.sleep(1.0)
-    keyboard.press("alt")
-    keyboard.press("f4")
-    keyboard.release("alt")
-    keyboard.release("f4")
-    conn.send("Successfully typed 'I am watching you...'".encode("utf-8"))
-def cmdCommand(cmd):
-    conn.send("Trying to run your command...".encode("utf-8"))
-    os.system(cmd)
-    conn.send("Successfully started command".encode("utf-8"))
-def matrixRun():
-    os.startfile("matrix.bat")
-    time.sleep(0.1)
-    keyboard.press("alt")
-    keyboard.press("enter")
-    keyboard.release("alt")
-    keyboard.release("enter")
-    conn.send("Successfully turned matrix on".encode("utf-8"))
-def notificationSend(msg):
-    plyer.notification.notify(message=msg)
-    conn.send("Successfully sent your notification".encode("utf-8"))
+# admin -> client
+# 127.0.0.1$26780$cmd$exe
+# admin <- client
+# 127.0.0.1$26780$22100$1$cmd$exe
 
-sock = socket.socket()
-sock.bind(("", 2345))
+client = socket.socket() # создаем объект клиента
+#  print(socket.gethostbyname(socket.gethostname()))
 
-while True:
-    sock.listen(1)
-    conn, address = sock.accept()
+user = input("admin or client? \n")  # тестовый вариант!! выбираем, кем будет являться наш пользователь
 
-    while True:
-        try:
-            data = str(conn.recv(1024))[2:-1]
-        except ConnectionResetError:
-            break
-        if not data:
-            break
-        if data == "me?" or data == "whoami" or data == "me":
-            me()
-        elif data == "clickLeft" or data == "clkL":
-            clickLeft()
-        elif data == "clickRight" or data == "clkR":
-            clickRight()
-        elif data == "shutdown" or data == "sd" or data == "shd":
-            shutdown()
-        elif data == "switch" or data == "alttab" or data == "altab":
-            switchWindow()
-        elif data == "close" or data == "closeWindow" or data == "clWin":
-            closeWindow()
-        elif data == "lang" or data == "switchLang":
-            changeLanguage()
-        elif data == "Mystify" or data == "mystify" or data == "myst":
-            Mystify()
-        elif data == "hide" or data == "hideWindows" or data == "hidW":
-            hideWindows()
-        elif data == "iamwatchingyou" or data == "watching" or data == "cmdScreammer":
-            watchingYou()
-        elif data == "matrix":
-            matrixRun()
-        elif "type" in data:
-            spisok = data.split("=")
-            try:
-                typing(spisok[1])
-            except IndexError:
-                conn.send("Error 2: Invalid syntax".encode("utf-8"))
-            except Exception:
-                conn.send("Unknown error".encode("utf-8"))
-        elif "cmd" in data:
-            spisok = data.split("=")
-            try:
-                cmdCommand(spisok[1])
-            except IndexError:
-                conn.send("Error 2: Invalid syntax".encode("utf-8"))
-            except Exception:
-                conn.send("Unknown error".encode("utf-8"))
-        elif "note" in data:
-            spisok = data.split("=")
-            try:
-                notificationSend(spisok[1])
-            except IndexError:
-                conn.send("Error 2: Invalid syntax".encode("utf-8"))
-            except Exception:
-                conn.send("Unknown error".encode("utf-8"))
-        else:
-            conn.send("Error 1: Unknown command".encode("utf-8"))
+answer = False
 
-sock.close()
+u = "utf-8"
+
+class Thread1(threading.Thread): # потоки через класс тк threading.Thread(target=...) не работает
+    def run(self):
+        global answer
+        while True: # бесконечный цикл с приемом данных (в отдельном потоке)
+            data = client.recv(2048)
+            if data:
+                d = data.decode("utf-8")  # декодирование файлов в привычный нам вид
+                print(f"DATA FROM SERVER: {d}")  # вывод данных на экран
+                answer = True
+            time.sleep(0.5)
+
+
+class Thread2(threading.Thread):  # поток для бесконечной отправки данных на сервер (когда нам надо)
+    def run(self):
+        global user
+        global answer
+        global u
+        while True:
+            if user == "admin":
+                while True:
+                    while not answer:
+                        time.sleep(1)
+                    time.sleep(1)
+                    fileOrNot = input("----------------------------------------------------------\n"
+                                      "Do you want to start existing script (1) or to make it now (2)?\n"
+                                      " Also you can use advanced mode (3).\n"
+                                      "----------------------------------------------------------\n")
+                    if fileOrNot == "1":
+                        f = open("file.script")
+                        lines = f.readlines()
+                        delay = False
+                        for i in range(int(lines[0][10]) * 2):
+                            if delay:
+                                time.sleep(int(lines[i + 1]))
+                                delay = False
+                                continue
+                            if not delay:
+                                client.send(f"{lines[i + 1]}\n".encode("utf-8"))
+                                print("sending!")
+                                delay = True
+                                continue
+                    elif fileOrNot == "2":
+                        targetIP = input("Enter target ip\n")
+                        targetID = input("Enter target id\n")
+                        command = input("Enter command for your target\n")
+                        args = input("Enter args for your command\n")
+
+
+                        s = f"A${targetIP}${targetID}${command}${args}\n"  # добавляем специальный префикс админа
+                        client.send(s.encode("utf-8"))
+                        print(f"senden {s}")
+
+                        answer = False
+                    elif fileOrNot == "3":
+                        break
+                    else:
+                        print("Unknown mode. Try again!")
+
+
+            elif user == "client":
+                u = "utf-8"
+                s = "C$" + input() + "\n"  # добавляем специальный префикс клиента
+                client.send(s.encode("utf-8"))
+                print(f"senden {s}")
+                print(f"senden-encoden(wtf) {s.encode(u)}")
+
+
+IP = "127.0.0.1"  # ip и порт
+PORT = 8080
+
+print("trying to connect to server...")
+client.connect((IP, PORT))  # подключаемся к серверу
+print(f"Successfully connected to {IP}:{PORT}. (Client -> Server)")
+
+if user == "admin":  # выбираем пользователя
+    print("Logged as Admin")
+    if os.path.exists("adminUniID.txt"):
+        f = open("adminUniID.txt")
+        uniIdAdmin = int(f.read())
+        f.close()
+
+        s = "Admin$" + str(uniIdAdmin) + "\n"  # отправляем на сервер специальную строку. ВАЖНО!!! после всех
+        # строк
+        client.send(s.encode("utf-8"))
+    else:
+        i = random.randint(1, 32000)
+        uniIdAdmin = i
+
+        s = "Admin$" + str(uniIdAdmin) + "\n"  # отправляем на сервер специальную строку. ВАЖНО!!! после всех
+        # строк
+        client.send(s.encode("utf-8"))
+        data = client.recv(2048).decode("utf-8")
+
+        while data != "Registration success":
+            i = random.randint(1, 32000)
+            uniIdAdmin = i
+
+            s = "Admin$" + str(uniIdAdmin) + "\n"  # отправляем на сервер специальную строку. ВАЖНО!!! после всех
+            # строк
+            client.send(s.encode("utf-8"))
+            data = client.recv(2048).decode("utf-8")
+        f = open("adminUniID.txt", "w")
+        f.write(str(uniIdAdmin))
+        f.close()
+        print(data)
+
+elif user == "client":
+    print("Logged as Client")
+    if os.path.exists("userUniID.txt"):
+        f = open("userUniID.txt")
+        uniIdUser = int(f.read())
+        f.close()
+
+        s = "Client$" + str(uniIdUser) + "\n"  # отправляем на сервер специальную строку. ВАЖНО!!! после всех
+        # строк
+        client.send(s.encode("utf-8"))
+    else:
+        print("Attempting to make id")
+        i = random.randint(1, 32000)
+        uniIdUser = i
+
+        s = "Client$" + "-" + str(uniIdUser) + "\n"  # отправляем на сервер специальную строку. ВАЖНО!!! после всех
+        print(s)
+        # строк
+        client.send(s.encode("utf-8"))
+        data = client.recv(2048).decode("utf-8")
+        print(data)
+
+        print("начало цикла")
+        if "Registration success" not in data:
+            print("после ифа")
+            while data != "Registration success\n":
+                i = random.randint(1, 32000)
+                uniIdUser = i
+
+                s = "Client$" + str(uniIdUser) + "\n"  # отправляем на сервер специальную строку. ВАЖНО!!! после всех
+                # строк
+                client.send(s.encode("utf-8"))
+                data = client.recv(2048).decode("utf-8")
+            print("после цикла в ифе")
+        print("конец цикла")
+        f = open("userUniID.txt", "w")
+        f.write(str(uniIdUser))
+        f.close()
+
+        print(data)
+else:
+    print("durak?")
+
+
+if user == "admin":
+    # пишем \n или работать не будет
+    print("Enter your commands!")
+    t1 = Thread1()  # запускаем обмен данными с сервером
+    t1.start()
+    t2 = Thread2()
+    t2.start()
+elif user == "client":  # TODO: не копию админского клиента
+    print("Enter your commands!")
+    t1 = Thread1()  # чтение данных
+    t1.start()
+    t2 = Thread2()  # их отправка
+    t2.start()
